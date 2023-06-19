@@ -1,0 +1,122 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+from time import sleep
+import random
+import csv
+# Define the URL of the website you want to scrape
+
+
+
+url = "https://draftscout.com/team.php?DSTeamId=23"
+headers = {
+    'User-Agent': 'Your User Agent String',
+    'Custom-Header': 'Your Custom Header Value'
+}
+
+def get_profile(url3):
+    try:
+        data = {}
+        sleep(random.uniform(4,9))
+        data['player_url'] = 'https://draftscout.com/' + url3
+        print(data['player_url'])
+        headers = {
+            'User-Agent': 'Your User Agent String',
+            'Custom-Header': 'Your Custom Header Value'
+        }
+        
+        response = requests.get(data['player_url'], headers=headers)
+        soup = BeautifulSoup(response.content, "html.parser")
+        rows = soup.find_all("tr")
+        data['college'] = rows[23].find('a').text
+        data['college_url'] = rows[23].find('a')['href']
+        
+        
+        
+        datapool = rows[23].find_all('font')
+        
+        data['player_rank'] = rows[21].text
+        data['name'] = datapool[1].text
+        data['number'] = datapool[5].text
+        data['billed_height'] = datapool[7].text
+        data['billed_weight'] = datapool[9].text
+        data['pos1'] = datapool[11].text
+        data['pos2'] = datapool[13].text
+        data['draftyear'] = rows[23].find_all('a')[2].text
+        data['draftyear_url'] = rows[23].find_all('a')[2]['href']
+        
+        data['forty_low'] = datapool[17].text
+        data['forty_time'] = datapool[19].text
+        data['forty_high'] = datapool[21].text
+        fonts = rows[25].find_all('font')
+        
+        data['measured_height'] = fonts[3].text
+        data['measured_weight'] = fonts[5].text
+        print(data['name'])
+    
+        csv_file = 'draftscout data.csv'
+    
+        with open(csv_file, 'a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=data.keys())
+        
+            # Check if the file is empty (i.e., no headers)
+            if file.tell() == 0:
+                writer.writeheader()
+        
+            # Append the data to the CSV file
+            writer.writerow(data)
+        
+        print("Data appended to the CSV file.")
+    except:
+        print(url3,file=open('failed url3s.csv','a'))
+
+def get_team_roster(url2):
+    try:
+        sleep(random.uniform(3,8))
+        # Read the HTML table into a list of DataFrames
+        tables = pd.read_html(url2,extract_links="all")
+        
+        # Assume the table of interest is the first one in the list
+        table_df = tables[7][1:]
+        print(len(table_df))
+        # Print the DataFrame
+        for row in range(0,len(table_df)):
+            player_url = table_df[0].values[row][1]
+            get_profile(player_url)
+    except:
+        print(url2,file=open('failed url2s.csv','a'))            
+
+def get_team_urls(url1):
+    print(len(url1))
+    try:
+        sleep(random.uniform(3,10))
+        response = requests.get(url1, headers=headers)
+        soup = BeautifulSoup(response.content, "html.parser")
+        dropdown = soup.find("select")
+        options = dropdown.find_all("option")
+        
+        option_list = []
+        for option in options:
+            option_list.append(option.text)
+        url_list = []
+
+
+        for option in options:
+            url_list.append(option.get("value"))
+        df = pd.DataFrame({'team_names': option_list[1:], 'team_urls': url_list[1:]})
+        print(len(url_list))
+        #url_list 401
+        for index, row in df[401:402].iterrows():
+            url2=row[1]
+            print(url2)
+            get_team_roster('https://draftscout.com/' + url2)
+    except:
+        print(url1,file=open('failed url1s.csv','a'))            
+
+
+get_team_urls(url)
+
+
+
+
+
